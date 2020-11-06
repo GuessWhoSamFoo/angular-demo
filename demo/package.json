@@ -25,7 +25,7 @@
     "lint": "ng lint",
     "e2e": "ng e2e",
     "electron:serve-tsc": "npx tsc -p tsconfig.serve.json",
-    "electron:local": "npx tsc main.ts && npx ng build --base-href ./ && npx electron .",
+    "electron:local": "npx tsc main.ts && npx ng build --base-href ./ && npx electron --local .",
     "electron:build": "npx electron-builder -p never"
   },
   "private": true,

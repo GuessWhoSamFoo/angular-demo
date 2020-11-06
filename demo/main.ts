@@ -9,9 +9,7 @@ let win: BrowserWindow = null;
 let serverPid: any = null;
 
 const args = process.argv.slice(1);
-const serve = args.some((val) => val === '--serve');
-
-const serverBinary = path.join(process.resourcesPath, 'extraResources', 'main');
+const local = args.some((val) => val === '--local');
 
 function createWindow(): BrowserWindow {
   const electronScreen = screen;
@@ -26,28 +24,17 @@ function createWindow(): BrowserWindow {
     webPreferences: {
       nodeIntegration: true,
       webSecurity: false,
-      allowRunningInsecureContent: serve ? true : false,
+      allowRunningInsecureContent: true,
       contextIsolation: false, // false if you want to run 2e2 test with Spectron
       enableRemoteModule: true, // true if you want to run 2e2 test  with Spectron or use remote module in renderer context (ie. Angular)
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  if (serve) {
+  if (local) {
     win.webContents.openDevTools();
-
-    require('electron-reload')(__dirname, {
-      electron: require(`${__dirname}/node_modules/electron`),
-    });
-    win.loadURL('http://localhost:4200');
-  } else {
-    // win.loadURL(url.format({
-    //   pathname: path.join(__dirname, '/dist/index.html'),
-    //   protocol: 'file:',
-    //   slashes: true
-    // }));
-    win.loadFile(path.join(__dirname, '/dist/index.html'));
   }
+  win.loadFile(path.join(__dirname, '/dist/index.html'));
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -70,6 +57,13 @@ const startBinary = () => {
 
   const out = fs.openSync(path.join(tmpPath, 'api.out.log'), 'a');
   const err = fs.openSync(path.join(tmpPath, 'api.err.log'), 'a');
+
+  let serverBinary: string;
+  if (local) {
+    serverBinary = path.join(__dirname, 'extraResources', 'main');
+  } else {
+    serverBinary = path.join(process.resourcesPath, 'extraResources', 'main');
+  }
 
   const server = child_process.spawn(serverBinary, [], {
     env: { NODE_ENV: 'production', PATH: process.env.PATH },

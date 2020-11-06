@@ -9,8 +9,7 @@ var fs = require("fs");
 var win = null;
 var serverPid = null;
 var args = process.argv.slice(1);
-var serve = args.some(function (val) { return val === '--serve'; });
-var serverBinary = path.join(process.resourcesPath, 'extraResources', 'main');
+var local = args.some(function (val) { return val === '--local'; });
 function createWindow() {
     var electronScreen = electron_1.screen;
     var size = electronScreen.getPrimaryDisplay().workAreaSize;
@@ -23,27 +22,16 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             webSecurity: false,
-            allowRunningInsecureContent: serve ? true : false,
+            allowRunningInsecureContent: true,
             contextIsolation: false,
             enableRemoteModule: true,
             preload: path.join(__dirname, 'preload.js')
         }
     });
-    if (serve) {
+    if (local) {
         win.webContents.openDevTools();
-        require('electron-reload')(__dirname, {
-            electron: require(__dirname + "/node_modules/electron")
-        });
-        win.loadURL('http://localhost:4200');
     }
-    else {
-        // win.loadURL(url.format({
-        //   pathname: path.join(__dirname, '/dist/index.html'),
-        //   protocol: 'file:',
-        //   slashes: true
-        // }));
-        win.loadFile(path.join(__dirname, '/dist/index.html'));
-    }
+    win.loadFile(path.join(__dirname, '/dist/index.html'));
     // Emitted when the window is closed.
     win.on('closed', function () {
         // Dereference the window object, usually you would store window
@@ -62,6 +50,13 @@ var startBinary = function () {
     });
     var out = fs.openSync(path.join(tmpPath, 'api.out.log'), 'a');
     var err = fs.openSync(path.join(tmpPath, 'api.err.log'), 'a');
+    var serverBinary;
+    if (local) {
+        serverBinary = path.join(__dirname, 'extraResources', 'main');
+    }
+    else {
+        serverBinary = path.join(process.resourcesPath, 'extraResources', 'main');
+    }
     var server = child_process.spawn(serverBinary, [], {
         env: { NODE_ENV: 'production', PATH: process.env.PATH },
         detached: true,

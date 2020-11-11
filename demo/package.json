@@ -7,6 +7,16 @@
     "path": false,
     "os": false
   },
+  "build": {
+    "directories": {
+      "output": "release/"
+    },
+    "publish": null,
+    "extraResources": [
+      "**/extraResources/**",
+      "!dist/"
+    ]
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -14,9 +24,9 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "electron:serve-tsc": "tsc -p tsconfig.serve.json",
-    "electron:local": "tsc main.ts && ng build --base-href ./ && electron .",
-    "electron:build": "electron-builder -p never"
+    "electron:serve-tsc": "npx tsc -p tsconfig.serve.json",
+    "electron:local": "npx tsc main.ts && npx ng build --base-href ./ && npx electron --local .",
+    "electron:build": "npx electron-builder -p never"
   },
   "private": true,
   "dependencies": {
@@ -28,6 +38,7 @@
     "@angular/platform-browser": "~9.1.0",
     "@angular/platform-browser-dynamic": "~9.1.0",
     "@angular/router": "~9.1.0",
+    "fix-path": "^3.0.0",
     "rxjs": "~6.5.4",
     "tslib": "^1.10.0",
     "zone.js": "~0.10.2"

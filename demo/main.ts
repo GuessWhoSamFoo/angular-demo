@@ -1,15 +1,17 @@
-
 import { app, BrowserWindow, screen } from 'electron';
 import * as path from 'path';
-import * as url from 'url';
+import * as child_process from 'child_process';
+import * as process from 'process';
+import * as os from 'os';
+import * as fs from 'fs';
 
 let win: BrowserWindow = null;
-let sub: any = null;
-const args = process.argv.slice(1),
-  serve = args.some(val => val === '--serve');
+let serverPid: any = null;
+
+const args = process.argv.slice(1);
+const local = args.some((val) => val === '--local');
 
 function createWindow(): BrowserWindow {
-
   const electronScreen = screen;
   const size = electronScreen.getPrimaryDisplay().workAreaSize;
 
@@ -22,30 +24,17 @@ function createWindow(): BrowserWindow {
     webPreferences: {
       nodeIntegration: true,
       webSecurity: false,
-      allowRunningInsecureContent: (serve) ? true : false,
-      contextIsolation: false,  // false if you want to run 2e2 test with Spectron
-      enableRemoteModule : true, // true if you want to run 2e2 test  with Spectron or use remote module in renderer context (ie. Angular)
-      preload: path.join(__dirname, 'preload.js')
+      allowRunningInsecureContent: true,
+      contextIsolation: false, // false if you want to run 2e2 test with Spectron
+      enableRemoteModule: true, // true if you want to run 2e2 test  with Spectron or use remote module in renderer context (ie. Angular)
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  if (serve) {
-
+  if (local) {
     win.webContents.openDevTools();
-
-    require('electron-reload')(__dirname, {
-      electron: require(`${__dirname}/node_modules/electron`)
-    });
-    win.loadURL('http://localhost:4200');
-
-  } else {
-    // win.loadURL(url.format({
-    //   pathname: path.join(__dirname, '/dist/index.html'),
-    //   protocol: 'file:',
-    //   slashes: true
-    // }));
-    win.loadFile(path.join(__dirname, '/dist/index.html'));
   }
+  win.loadFile(path.join(__dirname, '/dist/index.html'));
 
   // Emitted when the window is closed.
   win.on('closed', () => {
@@ -59,18 +48,42 @@ function createWindow(): BrowserWindow {
 }
 
 const startBinary = () => {
-  sub = require('child_process').spawn('/home/sfoo/angular-demo/server/main');
-};
+  const tmpPath = path.join(os.tmpdir(), 'octant');
+  fs.mkdir(path.join(tmpPath), { recursive: true }, (err) => {
+    if (err) {
+      throw err;
+    }
+  });
 
-const killBinary = () => {
-  sub.kill('SIGTERM');
+  const out = fs.openSync(path.join(tmpPath, 'api.out.log'), 'a');
+  const err = fs.openSync(path.join(tmpPath, 'api.err.log'), 'a');
+
+  let serverBinary: string;
+  if (local) {
+    serverBinary = path.join(__dirname, 'extraResources', 'main');
+  } else {
+    serverBinary = path.join(process.resourcesPath, 'extraResources', 'main');
+  }
+
+  const server = child_process.spawn(serverBinary, [], {
+    env: { NODE_ENV: 'production', PATH: process.env.PATH },
+    detached: true,
+    stdio: ['ignore', out, err],
+  });
+
+  serverPid = server.pid;
+  server.unref();
 };
 
 try {
+  app.on('before-quit', () => {
+    process.kill(serverPid, 'SIGHUP');
+  });
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  // Added 400 ms to fix the black background issue while using transparent window. More detais at https://github.com/electron/electron/issues/15947
+  // Added 400 ms to fix the black background issue while using transparent window.
+  // More detais at https://github.com/electron/electron/issues/15947
   app.on('ready', () => {
     startBinary();
     setTimeout(createWindow, 400);
@@ -83,7 +96,6 @@ try {
     if (process.platform !== 'darwin') {
       app.quit();
     }
-    killBinary();
   });
 
   app.on('activate', () => {
@@ -93,7 +105,6 @@ try {
       createWindow();
     }
   });
-
 } catch (e) {
   // Catch Error
   // throw e;
